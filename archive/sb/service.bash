@@ -97,15 +97,15 @@ install_singbox(){
     LATEST_VER=$(curl -s "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
     if [[ -z "$LATEST_VER" ]]; then
         warn "获取最新版本失败，使用硬编码的备用版本。"
-        LATEST_VER="1.13.2"
+        LATEST_VER="1.14.0"
     fi
 
     # 如果已安装，则按版本判断是否需要更新（保留现有配置）
     local was_installed=0
+    local current_ver=""
     if [[ -x "$SINGBOX_BIN" ]]; then
         was_installed=1
-        local current_ver=""
-        current_ver=$("$SINGBOX_BIN" version 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || true)
+        current_ver=$(sb_get_core_version)
         if [[ -n "$current_ver" && "$current_ver" == "$LATEST_VER" ]]; then
             info "检测到 Sing-box 已是最新版 v${current_ver}，跳过更新。"
             mkdir -p "$SINGBOX_CONF_DIR"
@@ -157,8 +157,9 @@ install_singbox(){
     fi
 
     create_service_files
-    # 更新二进制后尝试重启使其生效（失败不影响安装/更新结果）
+    # 更新二进制后：先询问是否对配置文件做平滑升级（适配新版配置规范），再重启生效
     if [[ "$was_installed" -eq 1 ]]; then
+        sb_migrate_config_after_update "$current_ver" "$LATEST_VER"
         restart_singbox || warn "重启 Sing-box 失败，请手动重启服务。"
     fi
     info "Sing-box 已安装并配置服务。"

@@ -111,3 +111,95 @@ configure_cron_reboot(){
     rm mycron
     info "定时任务已添加。"
 }
+
+# ---------------------------------------------------------------------------
+# 核心升级后的配置文件平滑迁移（依据官方迁移指南）
+# https://sing-box.sagernet.org/migration/
+#  - 1.13.0 移除 1.11 废弃项: 特殊出站 block/dns、入站 sniff/sniff_timeout/
+#    domain_strategy、direct 出站 override_address/override_port
+#  - 1.14.0 移除 1.12 废弃项: 旧 DNS 服务器 address 格式
+#  - TLS 内联 acme 选项于 1.14.0 废弃，官方将在 1.16.0 移除，
+#    新写法为 certificate_provider (内联对象或顶层 certificate_providers 引用)
+# 本脚本迁移范围: 脚本自身生成的 VLESS Reality / Hysteria2 入站配置，
+# 重点是 Hysteria2 ACME 证书配置的 tls.acme -> tls.certificate_provider 升级
+# ---------------------------------------------------------------------------
+
+# 支持配置平滑升级的版本范围（用于向用户展示）
+SB_MIGRATION_SOURCE_RANGE="v1.9.0 ~ v1.13.x 旧格式配置"
+SB_MIGRATION_TARGET_VER="v1.14.0+ 新格式"
+
+# 应用配置迁移规则（旧格式 -> 当前核心格式）
+# 用法: sb_apply_config_migration <配置文件路径>  (迁移结果输出到 stdout)
+sb_apply_config_migration(){
+    local conf_file="$1"
+    jq '
+        .inbounds = ((.inbounds // []) | map(
+            if (.tls | type) == "object" and (.tls | has("acme")) then
+                .tls.certificate_provider = (.tls.acme + {"type": "acme"})
+                | .tls |= del(.acme)
+            else . end
+        ))
+    ' "$conf_file"
+}
+
+# 执行配置迁移: 备份 -> 迁移 -> 校验，校验失败自动回滚
+sb_do_config_migration(){
+    local backup_path="$SINGBOX_CONF_PATH.bak.$(date +%Y%m%d%H%M%S)"
+    if ! cp -a "$SINGBOX_CONF_PATH" "$backup_path"; then
+        err "创建配置备份失败，已取消迁移。"
+        return 1
+    fi
+    info "已备份原配置到 $backup_path"
+
+    local tmp_file="$SINGBOX_CONF_PATH.migrate.tmp"
+    if ! sb_apply_config_migration "$SINGBOX_CONF_PATH" > "$tmp_file"; then
+        err "配置迁移处理失败 (jq error)，原配置未修改。"
+        rm -f "$tmp_file"
+        return 1
+    fi
+    mv "$tmp_file" "$SINGBOX_CONF_PATH"
+
+    if "$SINGBOX_BIN" check -c "$SINGBOX_CONF_PATH" >/dev/null 2>&1; then
+        info "配置文件平滑升级完成，已通过 v$(sb_get_core_version) 核心校验。"
+        return 0
+    fi
+
+    warn "迁移后的配置校验未通过，正在回滚..."
+    cp -a "$backup_path" "$SINGBOX_CONF_PATH"
+    err "已回滚到迁移前配置，请检查 $SINGBOX_CONF_PATH 或手动调整。"
+    return 1
+}
+
+# 核心升级后调用: 询问用户是否需要完成配置文件平滑升级
+# 用法: sb_migrate_config_after_update <旧核心版本> <新核心版本>
+sb_migrate_config_after_update(){
+    local old_ver="${1:-}" new_ver="${2:-}"
+    if [[ ! -f "$SINGBOX_CONF_PATH" ]]; then
+        return 0
+    fi
+
+    echo
+    info "核心已从 v${old_ver:-未知} 更新到 v${new_ver:-未知}。"
+    info "根据官方文档，配置文件规范有如下变化："
+    echo "  - 1.13.0 起移除特殊出站 (block/dns)、入站 sniff/domain_strategy 等旧字段"
+    echo "  - 1.14.0 起移除旧 DNS 服务器 address 格式"
+    echo "  - TLS 内联 acme 已于 1.14.0 废弃（官方将在 1.16.0 移除），新写法为 certificate_provider"
+    info "当前支持配置升级的版本：${SB_MIGRATION_SOURCE_RANGE} -> ${SB_MIGRATION_TARGET_VER}"
+    info "（迁移范围：本脚本生成的 VLESS Reality / Hysteria2 入站配置，含 Hysteria2 ACME 证书配置）"
+
+    # 先用新核心对现有配置做兼容性预检，帮助用户决策
+    if "$SINGBOX_BIN" check -c "$SINGBOX_CONF_PATH" >/dev/null 2>&1; then
+        info "预检：当前配置已通过 v${new_ver} 核心校验，可继续使用。"
+    else
+        warn "预检：当前配置未通过 v${new_ver} 核心校验，建议执行平滑升级。"
+    fi
+
+    local sb_mig_answer=""
+    read -rp "是否需要完成配置文件平滑升级？[y/N]: " sb_mig_answer
+    if [[ ! "$sb_mig_answer" =~ ^[Yy]$ ]]; then
+        info "已跳过配置迁移，现有配置将保持不变。"
+        return 0
+    fi
+
+    sb_do_config_migration
+}

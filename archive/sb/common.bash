@@ -49,6 +49,31 @@ get_random_uuid(){ uuidgen || cat /proc/sys/kernel/random/uuid; }
 # 生成随机密码
 get_random_password(){ openssl rand -base64 18; }
 
+# 读取当前已安装核心的版本号（如 1.14.0），未安装或失败时输出空串
+sb_get_core_version(){
+    "$SINGBOX_BIN" version 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || true
+}
+
+# 语义化版本比较: sb_ver_ge <a> <b>，当 a >= b 时返回 0
+# 纯 bash 实现，避免依赖 sort -V（busybox sort 不支持该选项）
+sb_ver_ge(){
+    local a="${1:-}" b="${2:-}"
+    [[ "$a" =~ ^[0-9]+(\.[0-9]+)*$ && "$b" =~ ^[0-9]+(\.[0-9]+)*$ ]] || return 2
+    local -a pa pb
+    IFS=. read -r -a pa <<< "$a"
+    IFS=. read -r -a pb <<< "$b"
+    local i x y
+    for i in 0 1 2; do
+        x=${pa[i]:-0}
+        y=${pb[i]:-0}
+        if (( x != y )); then
+            (( x > y ))
+            return
+        fi
+    done
+    return 0
+}
+
 # 从 domains.txt 随机选取一个伪装域名
 # 本地 sb/domains.txt 优先；不存在则尝试从远程拉取到模块临时目录
 # 拉取失败或文件为空时回退到 DEFAULT_DOMAIN（用户无感知）

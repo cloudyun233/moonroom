@@ -21,18 +21,37 @@ generate_tls_config(){
     if [[ "$TLS_CERT_MODE" == "2" ]]; then
         read -erp "域名: " domain
         read -erp "邮箱: " email
-        jq -n --arg domain "$domain" --arg email "$email" --arg data_dir "$SINGBOX_CONF_DIR" '
-            {
-                enabled: true,
-                alpn: ["h3"],
-                server_name: $domain,
-                acme: {
-                    domain: [$domain],
-                    email: $email,
-                    data_directory: $data_dir
+        # sing-box 1.14.0 起 TLS 内联 acme 已废弃（1.16.0 移除），新核心使用 certificate_provider 格式
+        local core_ver
+        core_ver=$(sb_get_core_version)
+        if [[ -z "$core_ver" ]] || sb_ver_ge "$core_ver" "1.14.0"; then
+            jq -n --arg domain "$domain" --arg email "$email" --arg data_dir "$SINGBOX_CONF_DIR" '
+                {
+                    enabled: true,
+                    alpn: ["h3"],
+                    server_name: $domain,
+                    certificate_provider: {
+                        type: "acme",
+                        domain: [$domain],
+                        email: $email,
+                        data_directory: $data_dir
+                    }
                 }
-            }
-        '
+            '
+        else
+            jq -n --arg domain "$domain" --arg email "$email" --arg data_dir "$SINGBOX_CONF_DIR" '
+                {
+                    enabled: true,
+                    alpn: ["h3"],
+                    server_name: $domain,
+                    acme: {
+                        domain: [$domain],
+                        email: $email,
+                        data_directory: $data_dir
+                    }
+                }
+            '
+        fi
     else
         local cert_path="$SINGBOX_CONF_DIR/singbox.crt"
         local key_path="$SINGBOX_CONF_DIR/singbox.key"

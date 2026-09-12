@@ -35,6 +35,12 @@ sb_fetch_module(){
     local mirror
     mirror=$(sb_github_mirror_url "$url")
 
+    # 本地文件路径 (file://) 直接复制，避免 curl/wget 对 file 协议的兼容差异
+    if [[ "$url" == file://* ]]; then
+        cp "${url#file://}" "$out"
+        return
+    fi
+
     if command -v curl >/dev/null 2>&1; then
         curl -fsSL "$url" -o "$out" || { [[ -n "$mirror" ]] && curl -fsSL "$mirror" -o "$out"; }
     elif command -v wget >/dev/null 2>&1; then
