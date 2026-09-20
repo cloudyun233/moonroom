@@ -3,6 +3,6 @@
 # 选用要求：域名需支持 TLS 1.3 + H2，且非 CDN/防火墙拦截站点
 # 当前可用域名：
 www.cho-kaguyahime.com
-kuranika.asmik-ace.co.jp
-kanokari-official.com
+re-zero-anime.jp
+shiboyugi-anime.com
 you-zitsu.com
