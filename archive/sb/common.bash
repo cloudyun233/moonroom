@@ -79,7 +79,7 @@ sb_ver_ge(){
 # 拉取失败或文件为空时回退到 DEFAULT_DOMAIN（用户无感知）
 get_random_domain(){
     local local_path="${SB_SCRIPT_DIR:-.}/sb/domains.txt"
-    local remote_url="${SB_MODULE_BASE_URL:-https://raw.githubusercontent.com/cloudyun233/jump-endfield/refs/heads/main/archive/sb}/domains.txt"
+    local remote_url="${SB_MODULE_BASE_URL:-https://raw.githubusercontent.com/cloudyun233/moonroom/refs/heads/main/archive/sb}/domains.txt"
     local domains_file=""
 
     if [[ -f "$local_path" ]]; then

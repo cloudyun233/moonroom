@@ -33,7 +33,7 @@
 
 ```bash
 # 主源失败（如 GitHub 429 限流）自动回退 jsdelivr 镜像
-bash <(curl -fsSL https://raw.githubusercontent.com/cloudyun233/jump-endfield/refs/heads/main/archive/sb.bash || curl -fsSL https://cdn.jsdelivr.net/gh/cloudyun233/jump-endfield@main/archive/sb.bash)
+bash <(curl -fsSL https://raw.githubusercontent.com/cloudyun233/moonroom/refs/heads/main/archive/sb.bash || curl -fsSL https://cdn.jsdelivr.net/gh/cloudyun233/moonroom@main/archive/sb.bash)
 ```
 
 **功能选项：**
@@ -50,7 +50,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cloudyun233/jump-endfield/re
 
 ```bash
 # 主源失败（如 GitHub 429 限流）自动回退 jsdelivr 镜像
-bash <(curl -fsSL https://raw.githubusercontent.com/cloudyun233/jump-endfield/refs/heads/main/archive/official.bash || curl -fsSL https://cdn.jsdelivr.net/gh/cloudyun233/jump-endfield@main/archive/official.bash)
+bash <(curl -fsSL https://raw.githubusercontent.com/cloudyun233/moonroom/refs/heads/main/archive/official.bash || curl -fsSL https://cdn.jsdelivr.net/gh/cloudyun233/moonroom@main/archive/official.bash)
 ```
 
 **功能选项：**

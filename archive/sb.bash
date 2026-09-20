@@ -10,7 +10,7 @@
 
 set -o pipefail
 
-SB_MODULE_BASE_URL="${SB_MODULE_BASE_URL:-https://raw.githubusercontent.com/cloudyun233/jump-endfield/refs/heads/main/archive/sb}"
+SB_MODULE_BASE_URL="${SB_MODULE_BASE_URL:-https://raw.githubusercontent.com/cloudyun233/moonroom/refs/heads/main/archive/sb}"
 SB_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || pwd)"
 SB_MODULE_TMP_DIR=""
 
